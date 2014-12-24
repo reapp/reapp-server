@@ -9,6 +9,11 @@ var statsPlugin = require('./lib/statsPlugin');
 module.exports = function(opts) {
   var entry = opts.entry;
 
+  // allow shorthand for single entry
+  if (typeof entry === 'string') {
+    entry = { main: entry };
+  }
+
   if (opts.vendorChunk)
     entry.vendor = Object.keys(require('../package.json').dependencies);
 

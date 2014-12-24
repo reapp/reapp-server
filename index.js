@@ -95,12 +95,11 @@ module.exports = function(opts) {
     app.use('/assets', express.static(__dirname + path));
   });
 
-  var configFile = opts.config || 'config.hot.js';
-  var webpackConfigPath = path.join(__dirname, '/webpack/', configFile);
-  var webpackConfig = require(webpackConfigPath);
+  var makeWebpackConfig = require(path.join(__dirname, 'webpack', 'make'));
+  opts.webpackConfig = makeWebpackConfig(opts);
 
   if (opts.dev)
-    runDevelopmentServer(webpackConfig);
+    runDevelopmentServer(opts);
   else
-    runProductionServer(webpackConfig);
+    runProductionServer(opts);
 };
