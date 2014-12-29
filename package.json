@@ -8,26 +8,19 @@
   },
   "author": "Nate Wienert",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "react-style-webpack-plugin": "git+https://github.com/js-next/react-style-webpack-plugin#c1fce80c1",
     "null-loader": "~0.1.0",
     "json-loader": "~0.5.1",
     "prepend-file": "~0.2.0",
     "transform-loader": "~0.2.1",
     "react-proxy-loader": "~0.3.2",
-    "qs": "~2.3.3",
-    "yargs": "~1.3.3",
-    "cors": "~2.5.2",
-    "express": "~4.10.6",
     "exports-loader": "~0.6.2",
     "html-loader": "~0.2.3",
-    "webpack": "~1.4.14",
-    "webpack-dev-server": "~1.7.0",
     "postcss-loader": "~0.2.0",
     "jsx-loader": "~0.12.2",
     "autoprefixer-core": "~4.0.2",
     "bundle-loader": "~0.5.2",
-    "react": "~0.12.2",
     "react-hot-loader": "~1.0.4",
     "autoprefixer-loader": "~1.0.0",
     "css-loader": "~0.9.0",
@@ -36,5 +29,17 @@
     "nib": "~1.0.4",
     "stylus-loader": "~0.5.0",
     "react-router": "~0.11.6"
+  },
+  "devDependencies": {
+    "qs": "~2.3.3",
+    "yargs": "~1.3.3",
+    "cors": "~2.5.2",
+    "express": "~4.10.6",
+    "webpack": "~1.4.14",
+    "webpack-dev-server": "~1.7.0",
+    "react": "~0.12.2",
+    "react-hot-loader": "~1.0.4",
+    "react-router": "~0.11.6",
+    "mkdirp": "~0.5.0"
   }
 }

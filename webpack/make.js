@@ -15,7 +15,7 @@ module.exports = function(opts) {
   }
 
   if (opts.vendorChunk)
-    entry.vendor = Object.keys(require('../package.json').dependencies);
+    entry.vendor = Object.keys(require(opts.dir + '/package.json').dependencies);
 
   var jsxLoader = [
     ReactStylePlugin.loader(),
@@ -44,14 +44,15 @@ module.exports = function(opts) {
   var modulesDirectories = [
     'web_modules',
     'node_modules',
+    'server_modules',
     'app'
   ];
 
   var extensions = ['', '.web.js', '.js', '.jsx'];
-  var root = [path.join(__dirname, 'app')];
+  var root = [path.join(opts.dir, 'app', 'app')];
 
   var output = {
-    path: path.join(__dirname, '..', 'build',
+    path: path.join(opts.dir, 'build',
       opts.prerender ? 'prerender' : 'public'),
 
     filename: '[name].js' +
@@ -67,7 +68,7 @@ module.exports = function(opts) {
   };
 
   var plugins = [
-    statsPlugin(opts),
+    // statsPlugin(opts),
     new webpack.PrefetchPlugin('react'),
     new webpack.PrefetchPlugin('react/lib/ReactComponentBrowserEnvironment'),
     // new ReactStylePlugin('bundle.css'),
@@ -140,8 +141,8 @@ module.exports = function(opts) {
     debug: opts.debug,
     resolveLoader: {
       root: [
-        path.join(__dirname, 'node_modules'),
-        path.join(__dirname, 'web_modules')
+        path.join(opts.dir, 'node_modules'),
+        path.join(opts.dir, 'web_modules')
       ],
       alias: aliasLoader
     },

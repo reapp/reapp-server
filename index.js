@@ -1,30 +1,37 @@
-/* --dev --port [#] --config [path] --wport [#] --quiet --colors --progress --hot */
+// runs a simple express server to serve assets
+// & a webpack-dev-server for serving the app
+// or in production builds the bundle and serves with express
 
-var express = require('express');
-var path = require('path');
-var yargs = require('yargs').argv;
-var fs = require('fs');
-var os = require('os');
-var util = require('util');
+var Express = require('express');
+var Path = require('path');
+var Yargs = require('yargs').argv;
+var Fs = require('fs');
 var Router = require('react-router');
 var Cors = require('cors');
-var webpack = require('webpack');
+var Webpack = require('webpack');
+var WebpackServer = require('./webpack/server');
+var Mkdirp = require('mkdirp');
 
-function runDevelopmentServer(opts) {
+function runServer(app) {
+  var port = app.get('port');
+  console.log('Server running on', port);
+  app.listen(port);
+}
+
+function runDevelopmentServer(app, opts) {
   console.log('opts', opts);
-  var webpackServer = require('./webpack/server');
   opts.hostname = opts.hostname || 'localhost';
 
-  webpackServer.run(opts.webpackConfig, opts, function(template) {
+  WebpackServer.run(opts.webpackConfig, opts, function(template) {
     app.get('*', function(req, res) {
       res.send(template);
     });
-    runServer();
+    runServer(app);
   });
 }
 
-function runProductionServer(opts) {
-  webpack(opts.webpackConfig, function(err) {
+function runProductionServer(app, opts) {
+  Webpack(opts.webpackConfig, function(err) {
     if (err) console.warn(err, stats);
     else {
       var outputPath = config.output.path;
@@ -37,16 +44,12 @@ function runProductionServer(opts) {
         return renderProductionApp(app, req.path, STYLE_URL, SCRIPT_URL);
       });
 
-      runServer();
+      runServer(app);
     }
   });
 }
 
-function runServer() {
-  console.log('Server running on', port);
-  app.listen(app.get('port'));
-}
-
+// todo: move this to reapp-routes
 function renderProductionApp(app, path, styleUrl, scriptUrl) {
   return new Promise(function(resolve, reject) {
     Router.renderRoutesToString(app, path, function(err, ar, html, data) {
@@ -67,12 +70,29 @@ function renderProductionApp(app, path, styleUrl, scriptUrl) {
   });
 }
 
-module.exports = function(opts) {
-  opts = opts || yargs;
+function linkServerModules(toDir) {
+  Mkdirp(toDir + '/server_modules/', function(err) {
+    if (err)
+      throw new Error(err);
+    else
+      copyServerModules(toDir);
+  });
+}
 
-  var app = express();
-  var port = Number(opts.port || process.env.PORT || 5283);
-  app.set('port', port);
+function copyServerModules(toDir) {
+  var serverModules = require('./package.json').dependencies;
+
+  Object.keys(serverModules).forEach(function(packageName) {
+    var srcModule = __dirname + '/node_modules/' + packageName;
+    var destModule = toDir + '/server_modules/' + packageName;
+
+    if (!Fs.existsSync(destModule))
+      Fs.symlinkSync(srcModule, destModule, 'dir');
+  });
+}
+
+module.exports = function(opts) {
+  opts = opts || Yargs;
 
   console.log(
     'Starting',
@@ -82,9 +102,12 @@ module.exports = function(opts) {
     'server...'
   );
 
+  var app = Express();
+  var port = Number(opts.port || process.env.PORT || 5283);
+  app.set('port', port);
   app.use(Cors());
 
-  var staticPaths = [
+  var staticPaths = opts.staticPaths || [
     '/build/public',
     '/assets',
     '/web_modules',
@@ -92,14 +115,16 @@ module.exports = function(opts) {
   ];
 
   staticPaths.forEach(function(path) {
-    app.use('/assets', express.static(__dirname + path));
+    app.use('/assets', Express.static(__dirname + path));
   });
 
-  var makeWebpackConfig = require(path.join(__dirname, 'webpack', 'make'));
+  var makeWebpackConfig = require(Path.join(__dirname, 'webpack', 'make'));
   opts.webpackConfig = makeWebpackConfig(opts);
 
+  linkServerModules(opts.dir);
+
   if (opts.dev)
-    runDevelopmentServer(opts);
+    runDevelopmentServer(app, opts);
   else
-    runProductionServer(opts);
+    runProductionServer(app, opts);
 };
