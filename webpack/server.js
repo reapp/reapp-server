@@ -6,7 +6,7 @@ module.exports = {
 
   run: function(config, opts, callback) {
     var hostname = opts.hostname || 'localhost';
-    var port = Number(opts.wport || process.env.WEBPACKPORT || 5284);
+    var port = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
     var base = 'http://' + hostname + ':' + port + '/';
 
     config.output.publicPath = base;
@@ -17,9 +17,9 @@ module.exports = {
         contentBase: '../',
         quiet: !!opts.quiet,
         hot: !!opts.hot,
-        progress: !!opts.progress,
+        progress: true,
         stats: {
-          colors: !!opts.colors,
+          colors: true,
           timings: true
         }
       }

@@ -12,21 +12,52 @@ var Webpack = require('webpack');
 var WebpackServer = require('./webpack/server');
 var Mkdirp = require('mkdirp');
 
-function runServer(app) {
-  var port = app.get('port');
-  console.log('Server running on', port);
-  app.listen(port);
+function setupExpress(opts) {
+  var app = Express();
+  var port = Number(opts.port || process.env.PORT || 5283);
+  app.set('port', port);
+  app.use(Cors());
+
+  var staticPaths = opts.staticPaths || [
+    '/build/public',
+    '/assets',
+    '/web_modules',
+    '/node_modules/reapp-ui/assets'
+  ];
+
+  staticPaths.forEach(function(path) {
+    app.use('/assets', Express.static(opts.dir + path));
+  });
+
+  return app;
+}
+
+function getWebpackConfig(opts) {
+  var makeWebpackConfig = require(Path.join(__dirname, 'webpack', 'make'));
+  return makeWebpackConfig(opts);
+}
+
+function startServer(app) {
+  app.listen(app.get('port'));
+}
+
+function run(prod, app, opts) {
+  return prod ?
+    runProductionServer(app, opts) :
+    runDevelopmentServer(app, opts);
 }
 
 function runDevelopmentServer(app, opts) {
-  console.log('opts', opts);
+  if (opts.debug)
+    console.log('opts', opts);
+
   opts.hostname = opts.hostname || 'localhost';
 
   WebpackServer.run(opts.webpackConfig, opts, function(template) {
     app.get('*', function(req, res) {
       res.send(template);
     });
-    runServer(app);
+    startServer(app);
   });
 }
 
@@ -44,7 +75,7 @@ function runProductionServer(app, opts) {
         return renderProductionApp(app, req.path, STYLE_URL, SCRIPT_URL);
       });
 
-      runServer(app);
+      startServer(app);
     }
   });
 }
@@ -53,7 +84,9 @@ function runProductionServer(app, opts) {
 function renderProductionApp(app, path, styleUrl, scriptUrl) {
   return new Promise(function(resolve, reject) {
     Router.renderRoutesToString(app, path, function(err, ar, html, data) {
-      console.log(path, ar);
+      if (opts.debug)
+        console.log('path', path, 'ar', ar);
+
       if (ar) {
         reject({ redirect: true, to: '/' + ar.to + '/' + ar.params.id,  }); // todo finish
       }
@@ -95,36 +128,16 @@ module.exports = function(opts) {
   opts = opts || Yargs;
 
   console.log(
-    'Starting',
-    opts.dev ?
-      'development' :
-      'production',
-    'server...'
+    'Starting server in',
+    opts.prod ? 'production' : 'development',
+    'mode'
   );
 
-  var app = Express();
-  var port = Number(opts.port || process.env.PORT || 5283);
-  app.set('port', port);
-  app.use(Cors());
-
-  var staticPaths = opts.staticPaths || [
-    '/build/public',
-    '/assets',
-    '/web_modules',
-    '/node_modules/reapp-ui/assets'
-  ];
-
-  staticPaths.forEach(function(path) {
-    app.use('/assets', Express.static(__dirname + path));
-  });
-
-  var makeWebpackConfig = require(Path.join(__dirname, 'webpack', 'make'));
-  opts.webpackConfig = makeWebpackConfig(opts);
-
+  // order not important
+  var app = setupExpress(opts);
+  opts.webpackConfig = getWebpackConfig(opts);
   linkServerModules(opts.dir);
 
-  if (opts.dev)
-    runDevelopmentServer(app, opts);
-  else
-    runProductionServer(app, opts);
+  console.log('Server running on', app.get('port'));
+  run(opts.prod, app, opts);
 };

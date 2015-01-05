@@ -44,7 +44,6 @@ module.exports = function(opts) {
   var modulesDirectories = [
     'web_modules',
     'node_modules',
-    'server_modules',
     'app'
   ];
 
@@ -58,7 +57,7 @@ module.exports = function(opts) {
     filename: '[name].js' +
       (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : ''),
 
-    chunkFilename: (opts.dev ? '[id].js' : '[name].js') +
+    chunkFilename: (opts.prod ? '[name].js' : '[id].js') +
       (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : ''),
 
     publicPath: '/',
@@ -105,7 +104,7 @@ module.exports = function(opts) {
   if (opts.hot)
     entry = joinEntry('webpack/hot/dev-server', entry);
 
-  if (opts.dev)
+  if (!opts.prod)
     entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
 
   Object.keys(stylesheetLoaders).forEach(function(ext) {
@@ -142,7 +141,7 @@ module.exports = function(opts) {
     resolveLoader: {
       root: [
         path.join(opts.dir, 'node_modules'),
-        path.join(opts.dir, 'web_modules')
+        path.join(opts.dir, 'server_modules')
       ],
       alias: aliasLoader
     },
