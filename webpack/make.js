@@ -44,6 +44,7 @@ module.exports = function(opts) {
   var modulesDirectories = [
     'web_modules',
     'node_modules',
+    'server_modules',
     'app'
   ];
 
