@@ -2,7 +2,6 @@ var path = require('path');
 var webpack = require('webpack');
 var ReactStylePlugin = require('react-style-webpack-plugin');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
-var loadersByExtension = require('./lib/loadersByExtension');
 var joinEntry = require('./lib/joinEntry');
 var statsPlugin = require('./lib/statsPlugin');
 
@@ -19,6 +18,50 @@ var statsPlugin = require('./lib/statsPlugin');
 // minimize: uglify and dedupe
 
 module.exports = function(opts) {
+  // LOADERS
+
+  // non-js loaders
+  var loaders = [
+    { test: /\.json$/, loader: 'json-loader' },
+    { test: /\.png|jgp|jpeg|gif|svg$/, loader: 'url-loader?limit=10000' },
+    { test: /\.html$/, loader: 'html-loader' }
+  ];
+
+  // js loader
+  var jsTest = /\.jsx?$/;
+  var jsLoaders = [
+    opts.hot ? 'react-hot' : null,
+    opts.prerender ? ReactStylePlugin.loader() : null,
+    '6to5-loader?experimental=true&runtime=true'
+  ];
+
+  jsLoaders.forEach(function(loader) {
+    if (loader)
+      loaders.push({ test: jsTest, loader: loader });
+  });
+
+  // style loaders
+  var cssLoader = 'css-loader!autoprefixer-loader?browsers=last 2 version';
+  var stylesheetLoaders = [
+    { test: /\.css$/, loader: cssLoader },
+    { test: /\.styl$/, loader: cssLoader + '!stylus-loader' }
+  ];
+
+  // various ways of handling stylesheet requires
+  stylesheetLoaders.forEach(function(stylesheetLoader) {
+    var loader = stylesheetLoader.loader;
+
+    if (opts.prerender)
+      stylesheetLoader.loader = 'null-loader';
+    else if (opts.separateStylesheet)
+      stylesheetLoader.loader = ExtractTextPlugin.extract('style-loader', loader);
+    else
+      stylesheetLoader.loader = 'style-loader!' + loader;
+  });
+
+
+  // WEBPACK CONFIG
+
   var entry = opts.entry;
 
   // allow shorthand for single entry
@@ -29,27 +72,6 @@ module.exports = function(opts) {
   if (opts.vendorChunk)
     entry.vendor = Object.keys(require(opts.dir + '/package.json').dependencies);
 
-  var jsLoader = [
-    ReactStylePlugin.loader(),
-    '6to5-loader?experimental=true&runtime=true'
-  ];
-
-  if (opts.hot)
-    jsLoader.unshift('react-hot');
-
-  var loaders = {
-    'jsx|js': jsLoader,
-    'json': 'json-loader',
-    'png|jgp|jpeg|gif|svg': 'url-loader?limit=10000',
-    'html': 'html-loader'
-  };
-
-  var cssLoader = 'css-loader!autoprefixer-loader?browsers=last 2 version';
-  var stylesheetLoaders = {
-    'css': cssLoader,
-    'styl': cssLoader + '!stylus-loader'
-  };
-
   var alias = {};
   var aliasLoader = {};
   var externals = [];
@@ -57,6 +79,9 @@ module.exports = function(opts) {
     'web_modules',
     'node_modules',
     'server_modules',
+
+    // this adds a shorthand so you can require stuff from your
+    // app folder without needing all the relative path fragility
     'app'
   ];
 
@@ -79,6 +104,9 @@ module.exports = function(opts) {
     pathinfo: opts.debug
   };
 
+
+  // PLUGINS
+
   var plugins = [
     // provides a single 6to5 runtime, works in combination with &runtime=true on 6to5 loader
     new webpack.ProvidePlugin({
@@ -89,7 +117,6 @@ module.exports = function(opts) {
     new webpack.NewWatchingPlugin(),
 
     // statsPlugin(opts),
-    // new ReactStylePlugin('bundle.css'),
 
     new webpack.PrefetchPlugin('react'),
     new webpack.PrefetchPlugin('react/lib/ReactComponentBrowserEnvironment'),
@@ -99,6 +126,9 @@ module.exports = function(opts) {
       }
     })
   ];
+
+  // if (opts.prerender)
+  //   plugins.push(new ReactStylePlugin('bundle.css'));
 
   if (opts.prerender) {
     aliasLoader['react-proxy$'] = 'react-proxy/unavailable';
@@ -125,19 +155,6 @@ module.exports = function(opts) {
   if (!opts.prod)
     entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
 
-  Object.keys(stylesheetLoaders).forEach(function(ext) {
-    var loaders = stylesheetLoaders[ext];
-    if (Array.isArray(loaders))
-      loaders = loaders.join('!');
-
-    if (opts.prerender)
-      stylesheetLoaders[ext] = 'null-loader';
-    else if (opts.separateStylesheet)
-      stylesheetLoaders[ext] = ExtractTextPlugin.extract('style-loader', loaders);
-    else
-      stylesheetLoaders[ext] = 'style-loader!' + loaders;
-  });
-
   if (opts.separateStylesheet && !opts.prerender)
     plugins.push(new ExtractTextPlugin('[name].css'));
 
@@ -147,12 +164,15 @@ module.exports = function(opts) {
       new webpack.optimize.DedupePlugin()
     );
 
+
+  // RETURN
+
   return {
     entry: entry,
     output: output,
     target: opts.prerender ? 'node' : 'web',
     module: {
-      loaders: loadersByExtension(loaders).concat(loadersByExtension(stylesheetLoaders))
+      loaders: loaders.concat(stylesheetLoaders)
     },
     devtool: opts.devtool,
     debug: opts.debug,
