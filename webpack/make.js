@@ -19,7 +19,7 @@ module.exports = function(opts) {
 
   var jsxLoader = [
     ReactStylePlugin.loader(),
-    'jsx-loader?harmony&stripTypes'
+    '6to5-loader?experimental=true&runtime=true'
   ];
 
   if (opts.hot)
@@ -68,13 +68,19 @@ module.exports = function(opts) {
   };
 
   var plugins = [
+    // provides a single 6to5 runtime, works in combination with &runtime=true on 6to5 loader
+    new webpack.ProvidePlugin({
+       to5Runtime: "imports?global=>{}!exports-loader?global.to5Runtime!6to5/runtime"
+     }),
+
+    // trying the new watching plugin
+    // new webpack.NewWatchingPlugin(),
+
     // statsPlugin(opts),
+    // new ReactStylePlugin('bundle.css'),
+
     new webpack.PrefetchPlugin('react'),
     new webpack.PrefetchPlugin('react/lib/ReactComponentBrowserEnvironment'),
-    // new ReactStylePlugin('bundle.css'),
-    new webpack.ResolverPlugin(
-      new webpack.ResolverPlugin.DirectoryDescriptionFilePlugin("bower.json", ["main"])
-    ),
     new webpack.DefinePlugin({
       'process.env': {
         NODE_ENV: JSON.stringify(opts.minimize ? 'production' : 'development')
