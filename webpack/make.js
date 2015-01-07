@@ -17,16 +17,16 @@ module.exports = function(opts) {
   if (opts.vendorChunk)
     entry.vendor = Object.keys(require(opts.dir + '/package.json').dependencies);
 
-  var jsxLoader = [
+  var jsLoader = [
     ReactStylePlugin.loader(),
     '6to5-loader?experimental=true&runtime=true'
   ];
 
   if (opts.hot)
-    jsxLoader.unshift('react-hot');
+    jsLoader.unshift('react-hot');
 
   var loaders = {
-    'jsx|js': jsxLoader,
+    'jsx|js': jsLoader,
     'json': 'json-loader',
     'png|jgp|jpeg|gif|svg': 'url-loader?limit=10000',
     'html': 'html-loader'
@@ -74,7 +74,7 @@ module.exports = function(opts) {
      }),
 
     // trying the new watching plugin
-    // new webpack.NewWatchingPlugin(),
+    new webpack.NewWatchingPlugin(),
 
     // statsPlugin(opts),
     // new ReactStylePlugin('bundle.css'),
@@ -96,7 +96,7 @@ module.exports = function(opts) {
 
   if (opts.hot) {
     plugins.push(new webpack.HotModuleReplacementPlugin());
-    // plugins.push(new webpack.NoErrorsPlugin());
+    plugins.push(new webpack.NoErrorsPlugin());
   }
 
   if (opts.vendorChunk) {
@@ -109,7 +109,7 @@ module.exports = function(opts) {
         (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : '')));
 
   if (opts.hot)
-    entry = joinEntry('webpack/hot/dev-server', entry);
+    entry = joinEntry('webpack/hot/only-dev-server', entry);
 
   if (!opts.prod)
     entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
