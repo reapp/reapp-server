@@ -6,6 +6,18 @@ var loadersByExtension = require('./lib/loadersByExtension');
 var joinEntry = require('./lib/joinEntry');
 var statsPlugin = require('./lib/statsPlugin');
 
+// options allowed:
+
+// entry:
+// prod:
+// devtool: specify webpack devtool
+// hot: use react-hot-loader
+// prerender: compile bundle to ./build
+// vendorChunk: split node_modules into vendor.js chunk
+// commonsChunk: split common files into commons.js chunk
+// longTermCaching: use hash name with files
+// minimize: uglify and dedupe
+
 module.exports = function(opts) {
   var entry = opts.entry;
 
@@ -97,6 +109,8 @@ module.exports = function(opts) {
   if (opts.hot) {
     plugins.push(new webpack.HotModuleReplacementPlugin());
     plugins.push(new webpack.NoErrorsPlugin());
+
+    entry = joinEntry('webpack/hot/only-dev-server', entry);
   }
 
   if (opts.vendorChunk) {
@@ -107,9 +121,6 @@ module.exports = function(opts) {
     plugins.push(
       new webpack.optimize.CommonsChunkPlugin('commons', 'commons.js' +
         (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : '')));
-
-  if (opts.hot)
-    entry = joinEntry('webpack/hot/only-dev-server', entry);
 
   if (!opts.prod)
     entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
