@@ -155,9 +155,7 @@ module.exports = function(opts) {
   var prod = opts.mode === 'production';
 
   console.log(
-    'Starting server in',
-    prod ? 'production' : 'development',
-    'mode'
+    'Starting server in', opts.mode, 'mode'
   );
 
   // order not important
