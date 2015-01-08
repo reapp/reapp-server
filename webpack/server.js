@@ -4,15 +4,18 @@ var webpack = require('webpack');
 
 module.exports = {
 
-  run: function(config, opts, callback) {
+  run: function(configArr, opts, callback) {
     var hostname = opts.hostname || 'localhost';
     var port = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
     var base = 'http://' + hostname + ':' + port + '/';
 
-    config.output.publicPath = base;
+    // set publicPath to point to base path
+    configArr.forEach(function(config) {
+      config.output.publicPath = base;
+    });
 
     var webpackServer = new WebpackDevServer(
-      webpack(config),
+      webpack(configArr),
       {
         contentBase: '../',
         quiet: !!opts.quiet,

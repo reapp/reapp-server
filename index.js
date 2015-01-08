@@ -10,7 +10,7 @@ var Router = require('react-router');
 var Cors = require('cors');
 var Webpack = require('webpack');
 var WebpackServer = require('./webpack/server');
-var Mkdirp = require('mkdirp');
+var mkdirp = require('mkdirp');
 
 function setupExpress(opts) {
   var app = Express();
@@ -103,25 +103,40 @@ function renderProductionApp(app, path, styleUrl, scriptUrl) {
   });
 }
 
-function linkServerModules(toDir) {
-  Mkdirp(toDir + '/server_modules/', function(err) {
+function linkServerModules(toDir, cb) {
+  mkdirp(toDir + '/server_modules/', function(err) {
     if (err)
       throw new Error(err);
     else
-      copyServerModules(toDir);
+      copyServerModules(toDir, cb);
   });
 }
 
-function copyServerModules(toDir) {
+function copyServerModules(toDir, cb) {
   var serverModules = require('./package.json').dependencies;
 
   Object.keys(serverModules).forEach(function(packageName) {
     var srcModule = __dirname + '/node_modules/' + packageName;
     var destModule = toDir + '/server_modules/' + packageName;
 
-    if (!Fs.existsSync(destModule))
-      Fs.symlinkSync(srcModule, destModule, 'dir');
+    Fs.exists(destModule, function(exists) {
+      if (!exists)
+        Fs.symlink(srcModule, destModule, 'dir');
+    });
   });
+
+  setTimeout(function() {
+    cb()
+  });
+}
+
+function makeBuildDir(dir) {
+  mkdirp(dir + '/build');
+}
+
+function runServer(app, opts) {
+  console.log('Server running on', app.get('port'));
+  run(opts.prod, app, opts);
 }
 
 module.exports = function(opts) {
@@ -136,8 +151,7 @@ module.exports = function(opts) {
   // order not important
   var app = setupExpress(opts);
   opts.webpackConfig = getWebpackConfig(opts);
-  linkServerModules(opts.dir);
 
-  console.log('Server running on', app.get('port'));
-  run(opts.prod, app, opts);
+  makeBuildDir(opts.dir);
+  linkServerModules(opts.dir, runServer.bind(null, app, opts));
 };

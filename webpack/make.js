@@ -1,3 +1,8 @@
+// this is a webpack config that takes a number of options
+// to let you build different style bundles
+// based on the webpack react example
+
+var fs = require('fs');
 var path = require('path');
 var webpack = require('webpack');
 var ReactStylePlugin = require('react-style-webpack-plugin');
@@ -5,19 +10,42 @@ var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var joinEntry = require('./lib/joinEntry');
 var statsPlugin = require('./lib/statsPlugin');
 
-// options allowed:
+function configName(mode) {
+  return 'config.' + mode + '.js';
+}
 
-// entry:
-// prod:
-// devtool: specify webpack devtool
-// hot: use react-hot-loader
-// prerender: compile bundle to ./build
-// vendorChunk: split node_modules into vendor.js chunk
-// commonsChunk: split common files into commons.js chunk
-// longTermCaching: use hash name with files
-// minimize: uglify and dedupe
+// opts:
+//   dir: directory of project
+//   entry: entrypoint file
+//   mode: mode of build
+//   devtool: webpack devtool to use
 
 module.exports = function(opts) {
+  var userConfig = path.join(opts.dir, 'config', configName(opts.mode));
+  var config;
+
+  if (fs.existsSync(userConfig))
+    config = require(userConfig);
+  else
+    config = require(path.join(__dirname, configName(opts.mode)));
+
+  return [].concat(config).map(function(entry) {
+    return makeEntry(entry, opts);
+  });
+};
+
+// config:
+//   entry: entrypoint file
+//   devtool: specify webpack devtool
+//   hot: use react-hot-loader
+//   prerender: compile bundle to ./build
+//   vendorChunk: split node_modules into vendor.js chunk
+//   commonsChunk: split common files into commons.js chunk
+//   longTermCaching: use hash name with files
+//   minimize: uglify and dedupe
+
+function makeEntry(config, opts) {
+
   // LOADERS
 
   // non-js loaders
@@ -30,8 +58,8 @@ module.exports = function(opts) {
   // js loader
   var jsTest = /\.jsx?$/;
   var jsLoaders = [
-    opts.hot ? 'react-hot' : null,
-    opts.prerender ? ReactStylePlugin.loader() : null,
+    config.hot ? 'react-hot' : null,
+    config.prerender ? ReactStylePlugin.loader() : null,
     '6to5-loader?experimental=true&runtime=true'
   ];
 
@@ -51,9 +79,9 @@ module.exports = function(opts) {
   stylesheetLoaders.forEach(function(stylesheetLoader) {
     var loader = stylesheetLoader.loader;
 
-    if (opts.prerender)
+    if (config.prerender)
       stylesheetLoader.loader = 'null-loader';
-    else if (opts.separateStylesheet)
+    else if (config.separateStylesheet)
       stylesheetLoader.loader = ExtractTextPlugin.extract('style-loader', loader);
     else
       stylesheetLoader.loader = 'style-loader!' + loader;
@@ -62,14 +90,14 @@ module.exports = function(opts) {
 
   // WEBPACK CONFIG
 
-  var entry = opts.entry;
+  var entry = opts.entry || config.entry;
 
   // allow shorthand for single entry
   if (typeof entry === 'string') {
     entry = { main: entry };
   }
 
-  if (opts.vendorChunk)
+  if (config.vendorChunk)
     entry.vendor = Object.keys(require(opts.dir + '/package.json').dependencies);
 
   var alias = {};
@@ -90,17 +118,17 @@ module.exports = function(opts) {
 
   var output = {
     path: path.join(opts.dir, 'build',
-      opts.prerender ? 'prerender' : 'public'),
+      config.prerender ? 'prerender' : 'public'),
 
     filename: '[name].js' +
-      (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : ''),
+      (config.longTermCaching && !config.prerender ? '?[chunkhash]' : ''),
 
-    chunkFilename: (opts.prod ? '[name].js' : '[id].js') +
-      (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : ''),
+    chunkFilename: (config.commonsChunk ? '[name].js' : '[id].js') +
+      (config.longTermCaching && !config.prerender ? '?[chunkhash]' : ''),
 
     publicPath: '/',
     sourceMapFilename: 'debugging/[file].map',
-    libraryTarget: opts.prerender ? 'commonjs2' : undefined,
+    libraryTarget: config.prerender ? 'commonjs2' : undefined,
     pathinfo: opts.debug
   };
 
@@ -116,49 +144,53 @@ module.exports = function(opts) {
     // trying the new watching plugin
     new webpack.NewWatchingPlugin(),
 
-    // statsPlugin(opts),
+    // outputs build stats to ./build/stats.json
+    statsPlugin(opts, config),
 
+    // optimize react building
     new webpack.PrefetchPlugin('react'),
     new webpack.PrefetchPlugin('react/lib/ReactComponentBrowserEnvironment'),
+
+    // set process.env for modules
     new webpack.DefinePlugin({
       'process.env': {
-        NODE_ENV: JSON.stringify(opts.minimize ? 'production' : 'development')
+        NODE_ENV: JSON.stringify(config.prerender ? 'production' : 'development')
       }
     })
   ];
 
-  // if (opts.prerender)
+  // if (config.prerender)
   //   plugins.push(new ReactStylePlugin('bundle.css'));
 
-  if (opts.prerender) {
+  if (config.prerender) {
     aliasLoader['react-proxy$'] = 'react-proxy/unavailable';
     externals.push(/^react(\/.*)?$/);
     plugins.push(new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }));
   }
 
-  if (opts.hot) {
+  if (config.hot) {
     plugins.push(new webpack.HotModuleReplacementPlugin());
     plugins.push(new webpack.NoErrorsPlugin());
 
     entry = joinEntry('webpack/hot/only-dev-server', entry);
   }
 
-  if (opts.vendorChunk) {
+  if (config.vendorChunk) {
     plugins.push(new webpack.optimize.CommonsChunkPlugin('vendor', 'vendor.js'));
   }
 
-  if (opts.commonsChunk)
+  if (config.commonsChunk)
     plugins.push(
       new webpack.optimize.CommonsChunkPlugin('commons', 'commons.js' +
-        (opts.longTermCaching && !opts.prerender ? '?[chunkhash]' : '')));
+        (config.longTermCaching && !config.prerender ? '?[chunkhash]' : '')));
 
-  if (!opts.prod)
+  if (!config.prerender)
     entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
 
-  if (opts.separateStylesheet && !opts.prerender)
+  if (config.separateStylesheet && !config.prerender)
     plugins.push(new ExtractTextPlugin('[name].css'));
 
-  if (opts.minimize)
+  if (config.minimize)
     plugins.push(
       new webpack.optimize.UglifyJsPlugin(),
       new webpack.optimize.DedupePlugin()
@@ -170,11 +202,11 @@ module.exports = function(opts) {
   return {
     entry: entry,
     output: output,
-    target: opts.prerender ? 'node' : 'web',
+    target: config.prerender ? 'node' : 'web',
     module: {
       loaders: loaders.concat(stylesheetLoaders)
     },
-    devtool: opts.devtool,
+    devtool: opts.devtool || config.devtool || 'eval',
     debug: opts.debug,
     resolveLoader: {
       root: [
@@ -192,4 +224,4 @@ module.exports = function(opts) {
     },
     plugins: plugins
   };
-};
+}
