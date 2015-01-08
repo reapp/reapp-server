@@ -12,6 +12,15 @@ var Webpack = require('webpack');
 var WebpackServer = require('./webpack/server');
 var mkdirp = require('mkdirp');
 
+// opts:
+//   mode: corresponds to config files, typically 'development' or 'production'
+//   port: port to serve on, webpack server port by default is +1 of this
+//   wport: optional, to specify custom webpack server work
+//   staticPaths: array of strings, relative paths of where to serve static assets
+//   dir: dir of where to serve app
+//   debug: turn on debugging from webpack
+//   hostname: set hostname to serve from, default 'localhost'
+
 function setupExpress(opts) {
   var app = Express();
   var port = Number(opts.port || process.env.PORT || 5283);
@@ -134,17 +143,20 @@ function makeBuildDir(dir) {
   mkdirp(dir + '/build');
 }
 
-function runServer(app, opts) {
+function runServer(prod, app, opts) {
   console.log('Server running on', app.get('port'));
-  run(opts.prod, app, opts);
+  run(prod, app, opts);
 }
 
+// this is designed to take options from the reapp CLI,
+// but could be used outside of it as it originally was
 module.exports = function(opts) {
   opts = opts || Yargs;
+  var prod = opts.mode === 'production';
 
   console.log(
     'Starting server in',
-    opts.prod ? 'production' : 'development',
+    prod ? 'production' : 'development',
     'mode'
   );
 
@@ -153,5 +165,5 @@ module.exports = function(opts) {
   opts.webpackConfig = getWebpackConfig(opts);
 
   makeBuildDir(opts.dir);
-  linkServerModules(opts.dir, runServer.bind(null, app, opts));
+  linkServerModules(opts.dir, runServer.bind(null, prod, app, opts));
 };
