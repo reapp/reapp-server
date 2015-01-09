@@ -23,8 +23,10 @@ var mkdirp = require('mkdirp');
 
 function setupExpress(opts) {
   var app = Express();
-  var port = Number(opts.port || process.env.PORT || 5283);
-  app.set('port', port);
+
+  opts.port = Number(opts.port || process.env.PORT || 5283);
+
+  app.set('port', opts.port);
   app.use(Cors());
 
   var staticPaths = opts.staticPaths || [
@@ -135,7 +137,7 @@ function copyServerModules(toDir, cb) {
   });
 
   setTimeout(function() {
-    cb()
+    cb();
   });
 }
 
