@@ -142,7 +142,7 @@ function makeEntry(config, opts) {
      }),
 
     // trying the new watching plugin
-    new webpack.NewWatchingPlugin(),
+    // new webpack.NewWatchingPlugin(),
 
     // outputs build stats to ./build/stats.json
     statsPlugin(opts, config),
