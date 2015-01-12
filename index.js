@@ -25,6 +25,7 @@ function setupExpress(opts) {
   var app = Express();
 
   opts.port = Number(opts.port || process.env.PORT || 5283);
+  opts.wport = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
 
   app.set('port', opts.port);
   app.use(Cors());
@@ -146,7 +147,7 @@ function makeBuildDir(dir) {
 }
 
 function runServer(prod, app, opts) {
-  console.log('Server running on', app.get('port'));
+  console.log('Express server running on', app.get('port'));
   run(prod, app, opts);
 }
 

@@ -6,8 +6,7 @@ module.exports = {
 
   run: function(configArr, opts, callback) {
     var hostname = opts.hostname || 'localhost';
-    var port = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
-    var base = 'http://' + hostname + ':' + port + '/';
+    var base = 'http://' + hostname + ':' + opts.wport + '/';
 
     // set publicPath to point to base path
     configArr.forEach(function(config) {
@@ -19,7 +18,7 @@ module.exports = {
       {
         contentBase: '../',
         quiet: !!opts.quiet,
-        hot: !!opts.hot,
+        hot: opts.hot,
         progress: true,
         stats: {
           colors: true,
@@ -28,13 +27,12 @@ module.exports = {
       }
     );
 
-    console.log('Webpack server running on', port);
-    webpackServer.listen(port, hostname);
+    console.log('Webpack server running on', opts.wport);
+    webpackServer.listen(opts.wport, hostname);
 
     var entries = [
       // 'vendor',
-      'main',
-      'webpack-dev-server'
+      'main'
     ];
 
     var scripts = entries.map(function(key) {

@@ -21,7 +21,7 @@ function configName(mode) {
 //   devtool: webpack devtool to use
 //   debug: log extra info
 
-module.exports = function(opts) {
+module.exports = function make(opts) {
   var userConfig = path.join(opts.dir, 'config', configName(opts.mode));
   var config;
 
@@ -46,27 +46,27 @@ module.exports = function(opts) {
 //   minimize: uglify and dedupe
 
 function makeEntry(config, opts) {
-
   // LOADERS
-
-  // non-js loaders
   var loaders = [
     { test: /\.json$/, loader: 'json-loader' },
     { test: /\.png|jgp|jpeg|gif|svg$/, loader: 'url-loader?limit=10000' },
     { test: /\.html$/, loader: 'html-loader' }
   ];
 
-  // js loader
   var jsTest = /\.jsx?$/;
-  var jsLoaders = [
-    config.hot ? 'react-hot' : null,
-    config.prerender ? ReactStylePlugin.loader() : null,
-    '6to5-loader?experimental=true&runtime=true'
-  ];
 
-  jsLoaders.forEach(function(loader) {
-    if (loader)
-      loaders.push({ test: jsTest, loader: loader });
+  if (opts.hot) {
+    loaders.push({ test: /\.jsx$/, loader: 'react-hot' });
+  }
+
+  if (config.prerender) {
+    loaders.push({ test: jsTest, loader: ReactStylePlugin.loader() });
+  }
+
+  loaders.push({
+    test: jsTest,
+    loader: '6to5-loader?experimental=true&runtime=true',
+    exclude: /socket\.io/
   });
 
   // style loaders
@@ -146,7 +146,7 @@ function makeEntry(config, opts) {
     // new webpack.NewWatchingPlugin(),
 
     // outputs build stats to ./build/stats.json
-    statsPlugin(opts, config),
+    // statsPlugin(opts, config),
 
     // optimize react building
     new webpack.PrefetchPlugin('react'),
@@ -169,7 +169,7 @@ function makeEntry(config, opts) {
     plugins.push(new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }));
   }
 
-  if (config.hot) {
+  if (opts.hot) {
     plugins.push(new webpack.HotModuleReplacementPlugin());
     plugins.push(new webpack.NoErrorsPlugin());
 
@@ -186,7 +186,7 @@ function makeEntry(config, opts) {
         (config.longTermCaching && !config.prerender ? '?[chunkhash]' : '')));
 
   if (!config.prerender)
-    entry = joinEntry('webpack-dev-server/client?http://localhost:5284', entry);
+    entry = joinEntry('webpack-dev-server/client?http://localhost:' + opts.wport, entry);
 
   if (config.separateStylesheet && !config.prerender)
     plugins.push(new ExtractTextPlugin('[name].css'));

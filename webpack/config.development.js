@@ -2,7 +2,6 @@
 
 module.exports = [
   {
-    hot: true,
     devtool: 'sourcemap'
   }
 ];
