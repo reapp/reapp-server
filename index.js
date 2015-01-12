@@ -5,11 +5,11 @@
 var Express = require('express');
 var Path = require('path');
 var Yargs = require('yargs').argv;
-var Fs = require('fs');
+var fs = require('fs');
 var Router = require('react-router');
 var Cors = require('cors');
 var Webpack = require('webpack');
-var WebpackServer = require('./webpack/server');
+var webpackServer = require('./webpack/server');
 var mkdirp = require('mkdirp');
 
 // opts:
@@ -64,7 +64,7 @@ function runDevelopmentServer(app, opts) {
 
   opts.hostname = opts.hostname || 'localhost';
 
-  WebpackServer.run(opts.webpackConfig, opts, function(template) {
+  webpackServer.run(opts.webpackConfig, opts, function(template) {
     app.get('*', function(req, res) {
       res.send(template);
     });
@@ -130,9 +130,9 @@ function copyServerModules(toDir, cb) {
     var srcModule = __dirname + '/node_modules/' + packageName;
     var destModule = toDir + '/server_modules/' + packageName;
 
-    Fs.exists(destModule, function(exists) {
+    fs.exists(destModule, function(exists) {
       if (!exists)
-        Fs.symlink(srcModule, destModule, 'dir');
+        fs.symlink(srcModule, destModule, 'dir');
     });
   });
 

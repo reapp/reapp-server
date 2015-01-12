@@ -19,6 +19,7 @@ function configName(mode) {
 //   entry: entrypoint file
 //   mode: mode of build
 //   devtool: webpack devtool to use
+//   debug: log extra info
 
 module.exports = function(opts) {
   var userConfig = path.join(opts.dir, 'config', configName(opts.mode));
@@ -199,7 +200,7 @@ function makeEntry(config, opts) {
 
   // RETURN
 
-  return {
+  var webpackConfig = {
     entry: entry,
     output: output,
     target: config.prerender ? 'node' : 'web',
@@ -224,4 +225,9 @@ function makeEntry(config, opts) {
     },
     plugins: plugins
   };
+
+  if (opts.debug)
+    console.log(webpackConfig);
+
+  return webpackConfig;
 }
