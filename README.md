@@ -26,6 +26,7 @@ hostname: set hostname to serve from, default 'localhost'
 
 ### TODO
 
+- Figure out better if its in a reapp directory before symlinking server_modules
 - Lots of work needed to get production apps running again
 - Also work to be done getting isomorphic working again
 - General organization and code docs throughout
