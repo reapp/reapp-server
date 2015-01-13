@@ -9,7 +9,7 @@
   "author": "Nate Wienert",
   "license": "MIT",
   "dependencies": {
-    "react-style-webpack-plugin": "git+https://github.com/js-next/react-style-webpack-plugin#c1fce80c1",
+    "react-style-webpack-plugin": "git+https://github.com/js-next/react-style-webpack-plugin#e83540f8a83a5",
     "null-loader": "~0.1.0",
     "json-loader": "~0.5.1",
     "prepend-file": "~0.2.0",
