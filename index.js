@@ -1,6 +1,6 @@
 // runs a simple express server to serve assets
 // & a webpack-dev-server for serving the app
-// or in production builds the bundle and serves with express
+// or in isomorphic looks for a bundle and index and serves
 
 var Express = require('express');
 var Path = require('path');
@@ -9,11 +9,15 @@ var fs = require('fs');
 var Router = require('react-router');
 var Cors = require('cors');
 var Webpack = require('webpack');
-var webpackServer = require('./webpack/server');
 var mkdirp = require('mkdirp');
 
+var webpackServer = require('./webpack-server');
+var makeBuildDir = require('./lib/makeBuildDir');
+
+var express = Express();
+
 // opts:
-//   mode: corresponds to config files, typically 'development' or 'production'
+//   mode: corresponds to config files, typically 'development' or 'isomorphic'
 //   port: port to serve on, webpack server port by default is +1 of this
 //   wport: optional, to specify custom webpack server work
 //   staticPaths: array of strings, relative paths of where to serve static assets
@@ -22,13 +26,11 @@ var mkdirp = require('mkdirp');
 //   hostname: set hostname to serve from, default 'localhost'
 
 function setupExpress(opts) {
-  var app = Express();
-
   opts.port = Number(opts.port || process.env.PORT || 5283);
   opts.wport = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
 
-  app.set('port', opts.port);
-  app.use(Cors());
+  express.set('port', opts.port);
+  express.use(Cors());
 
   var staticPaths = opts.staticPaths || [
     '/build/public',
@@ -38,133 +40,88 @@ function setupExpress(opts) {
   ];
 
   staticPaths.forEach(function(path) {
-    app.use('/assets', Express.static(opts.dir + path));
+    express.use('/assets', Express.static(opts.dir + path));
   });
-
-  return app;
 }
 
-function getWebpackConfig(opts) {
-  var makeWebpackConfig = require(Path.join(__dirname, 'webpack', 'make'));
-  return makeWebpackConfig(opts);
-}
-
-function startServer(app) {
-  app.listen(app.get('port'));
-}
-
-function run(prod, app, opts) {
-  return prod ?
-    runProductionServer(app, opts) :
-    runDevelopmentServer(app, opts);
-}
-
-function runDevelopmentServer(app, opts) {
-  if (opts.debug)
-    console.log('opts', opts);
-
+function runDevelopmentServer(opts) {
   opts.hostname = opts.hostname || 'localhost';
 
   webpackServer.run(opts.webpackConfig, opts, function(template) {
-    app.get('*', function(req, res) {
+    express.get('*', function(req, res) {
       res.send(template);
     });
-    startServer(app);
+
+    startServer();
   });
 }
 
-function runProductionServer(app, opts) {
-  Webpack(opts.webpackConfig, function(err) {
-    if (err) console.warn(err, stats);
-    else {
-      var outputPath = config.output.path;
-      var app = require(outputPath + '/main.js');
-      var stats = require(outputPath + '/../stats.json');
-      var STYLE_URL = 'main.css?' + stats.hash;
-      var SCRIPT_URL = [].concat(stats.assetsByChunkName.main)[0] + '?' + stats.hash;
+function runIsomorphicServer(opts) {
+  var app = require(opts.entry);
 
-      app.get('/*', function(req) {
-        return renderProductionApp(app, req.path, STYLE_URL, SCRIPT_URL);
-      });
+  opts.path = req.path;
+  opts.stats = require(opts.dir + '/build/stats.json');
 
-      startServer(app);
-    }
+  if (opts.debug) {
+    console.log('entry', opts.entry);
+    console.log('stats', opts.stats);
+    console.log('path', opts.path);
+    console.log();
+  }
+
+  express.get('*', function(req) {
+    return renderIsomorphicApp(app, opts);
   });
+
+  startServer();
 }
 
-// todo: move this to reapp-routes
-function renderProductionApp(app, path, styleUrl, scriptUrl) {
+function renderIsomorphicApp(app, opts) {
   return new Promise(function(resolve, reject) {
-    Router.renderRoutesToString(app, path, function(err, ar, html, data) {
-      if (opts.debug)
-        console.log('path', path, 'ar', ar);
 
-      if (ar) {
-        reject({ redirect: true, to: '/' + ar.to + '/' + ar.params.id,  }); // todo finish
-      }
-
-      var HTML = fs.readFileSync(__dirname + '/app/assets/index.html').toString();
+    // run app
+    app({ location: opts.path }, function(html, data) {
+      var HTML = fs.readFileSync(opts.dir + '/app/assets/index.html').toString();
       var output = HTML
         .replace('<!-- CONTENT -->', html)
-        .replace('<!-- DATA -->', '<script>window.ROUTER_PROPS = ' + JSON.stringify(data) + ';</script>')
-        .replace('<!-- STYLES -->', '<link rel="stylesheet" type="text/css" href="/' + styleUrl + '" />')
-        .replace('<!-- SCRIPTS -->', '<script src="/' + scriptUrl + '"></script>');
+        .replace('<!-- DATA -->', '<script>window.SERVER_DATA = ' + JSON.stringify(data) + ';</script>')
+        .replace('<!-- STYLES -->', '<link rel="stylesheet" type="text/css" href="/' + opts.stats.styleUrl + '" />')
+        .replace('<!-- SCRIPTS -->', '<script src="/' + opts.stats.scriptUrl + '"></script>');
 
       resolve(output);
     });
   });
 }
 
-function linkServerModules(toDir, cb) {
-  mkdirp(toDir + '/server_modules/', function(err) {
-    if (err)
-      throw new Error(err);
-    else
-      copyServerModules(toDir, cb);
-  });
-}
-
-function copyServerModules(toDir, cb) {
-  var serverModules = require('./package.json').dependencies;
-
-  Object.keys(serverModules).forEach(function(packageName) {
-    var srcModule = __dirname + '/node_modules/' + packageName;
-    var destModule = toDir + '/server_modules/' + packageName;
-
-    fs.exists(destModule, function(exists) {
-      if (!exists)
-        fs.symlink(srcModule, destModule, 'dir');
-    });
-  });
-
-  setTimeout(function() {
-    cb();
-  });
-}
-
-function makeBuildDir(dir) {
-  mkdirp(dir + '/build');
-}
-
-function runServer(prod, app, opts) {
-  console.log('Express server running on', app.get('port'));
-  run(prod, app, opts);
+function startServer() {
+  express.listen(
+    express.get('port')
+  );
 }
 
 // this is designed to take options from the reapp CLI,
 // but could be used outside of it as it originally was
 module.exports = function(opts) {
   opts = opts || Yargs;
-  var prod = opts.mode === 'production';
+  var prod = opts.mode === 'isomorphic';
 
   console.log(
-    'Starting server in', opts.mode, 'mode'
+    'Starting server in', opts.mode, 'mode...'
   );
 
   // order not important
-  var app = setupExpress(opts);
-  opts.webpackConfig = getWebpackConfig(opts);
+  setupExpress(opts);
 
-  makeBuildDir(opts.dir);
-  linkServerModules(opts.dir, runServer.bind(null, prod, app, opts));
+  console.log(
+    'Running express server on',
+    express.get('port'),
+    '...'
+  );
+
+  return opts.prod ?
+    runIsomorphicServer(opts) :
+    runDevelopmentServer(opts);
+
+  // makeBuildDir(opts.dir);
+  // linkServerModules(opts.dir, );
 };
