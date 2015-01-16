@@ -44,7 +44,7 @@ function setupExpress(opts) {
   });
 }
 
-function runDevelopmentServer(opts) {
+function setupWebpackServer(opts, cb) {
   opts.hostname = opts.hostname || 'localhost';
 
   webpackServer.run(opts.webpackConfig, opts, function(template) {
@@ -52,15 +52,14 @@ function runDevelopmentServer(opts) {
       res.send(template);
     });
 
-    startServer();
+    cb();
   });
 }
 
-function runIsomorphicServer(opts) {
-  var app = require(opts.entry);
-
+function setupIsomorphicServer(opts, cb) {
+  var app = require(opts.entry || opts.dir + '/build/prerender/main.js');
+  opts.stats = require(opts.stats || opts.dir + '/build/stats.json');
   opts.path = req.path;
-  opts.stats = require(opts.dir + '/build/stats.json');
 
   if (opts.debug) {
     console.log('entry', opts.entry);
@@ -69,19 +68,21 @@ function runIsomorphicServer(opts) {
     console.log();
   }
 
-  express.get('*', function(req) {
-    return renderIsomorphicApp(app, opts);
+  express.get('*', function(req, res) {
+    var template = renderIsomorphicApp(app, req.path, opts);
+    res.send(template);
   });
 
-  startServer();
+  cb();
 }
 
 function renderIsomorphicApp(app, opts) {
   return new Promise(function(resolve, reject) {
-
     // run app
     app({ location: opts.path }, function(html, data) {
+      // read ${APPDIR}/assets/index.html
       var HTML = fs.readFileSync(opts.dir + '/app/assets/index.html').toString();
+
       var output = HTML
         .replace('<!-- CONTENT -->', html)
         .replace('<!-- DATA -->', '<script>window.SERVER_DATA = ' + JSON.stringify(data) + ';</script>')
@@ -103,7 +104,6 @@ function startServer() {
 // but could be used outside of it as it originally was
 module.exports = function(opts) {
   opts = opts || Yargs;
-  var prod = opts.mode === 'isomorphic';
 
   console.log(
     'Starting server in', opts.mode, 'mode...'
@@ -118,9 +118,9 @@ module.exports = function(opts) {
     '...'
   );
 
-  return opts.prod ?
-    runIsomorphicServer(opts) :
-    runDevelopmentServer(opts);
+  return opts.iso ?
+    setupIsomorphicServer(opts, startServer) :
+    setupWebpackServer(opts, startServer);
 
   // makeBuildDir(opts.dir);
   // linkServerModules(opts.dir, );
