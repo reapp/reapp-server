@@ -11,24 +11,19 @@ var Cors = require('cors');
 var Webpack = require('webpack');
 var mkdirp = require('mkdirp');
 
-var webpackServer = require('./webpack-server');
+var webpackServer = require('./lib/webpackServer');
 var makeBuildDir = require('./lib/makeBuildDir');
 
 var express = Express();
 
 // opts:
 //   mode: corresponds to config files, typically 'development' or 'isomorphic'
-//   port: port to serve on, webpack server port by default is +1 of this
-//   wport: optional, to specify custom webpack server work
 //   staticPaths: array of strings, relative paths of where to serve static assets
 //   dir: dir of where to serve app
 //   debug: turn on debugging from webpack
 //   hostname: set hostname to serve from, default 'localhost'
 
 function setupExpress(opts) {
-  opts.port = Number(opts.port || process.env.PORT || 5283);
-  opts.wport = Number(opts.wport || process.env.WEBPACKPORT || opts.port + 1);
-
   express.set('port', opts.port);
   express.use(Cors());
 
@@ -47,7 +42,12 @@ function setupExpress(opts) {
 function setupWebpackServer(opts, cb) {
   opts.hostname = opts.hostname || 'localhost';
 
-  webpackServer.run(opts.webpackConfig, opts, function(template) {
+  opts.entry = function entry() {
+    var appEntry = reqiure(opts.entry);
+    appEntry();
+  };
+
+  webpackServer.run(opts, function(template) {
     express.get('*', function(req, res) {
       res.send(template);
     });
@@ -58,8 +58,7 @@ function setupWebpackServer(opts, cb) {
 
 function setupIsomorphicServer(opts, cb) {
   var app = require(opts.entry || opts.dir + '/build/prerender/main.js');
-  opts.stats = require(opts.stats || opts.dir + '/build/stats.json');
-  opts.path = req.path;
+  opts.stats = opts.stats || require(opts.dir + '/build/stats.json');
 
   if (opts.debug) {
     console.log('entry', opts.entry);
@@ -76,14 +75,28 @@ function setupIsomorphicServer(opts, cb) {
   cb();
 }
 
-function renderIsomorphicApp(app, opts) {
+function renderIsomorphicApp(app, path, opts) {
   return new Promise(function(resolve, reject) {
-    // run app
-    app({ location: opts.path }, function(html, data) {
-      // read ${APPDIR}/assets/index.html
-      var HTML = fs.readFileSync(opts.dir + '/app/assets/index.html').toString();
+    if (debug)
+      console.log('request: ', path);
 
-      var output = HTML
+    // run app
+    app({ location: path }, function(html, data) {
+      if (debug) {
+        console.log('ran app, received...');
+        console.log('html:');
+        console.log(html);
+        console.log('data:');
+        console.log(data);
+      }
+
+      // read ${APPDIR}/assets/index.html
+      var layout = fs.readFileSync(opts.dir + '/app/assets/layout.html').toString();
+
+      if (debug)
+        console.log('layout', layout);
+
+      var output = layout
         .replace('<!-- CONTENT -->', html)
         .replace('<!-- DATA -->', '<script>window.SERVER_DATA = ' + JSON.stringify(data) + ';</script>')
         .replace('<!-- STYLES -->', '<link rel="stylesheet" type="text/css" href="/' + opts.stats.styleUrl + '" />')
