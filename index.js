@@ -8,7 +8,6 @@ var Yargs = require('yargs').argv;
 var fs = require('fs');
 var Router = require('react-router');
 var Cors = require('cors');
-var Webpack = require('webpack');
 var mkdirp = require('mkdirp');
 
 var webpackServer = require('./lib/webpackServer');
@@ -67,14 +66,14 @@ function setupIsomorphicServer(opts, cb) {
   }
 
   express.get('*', function(req, res) {
-    var template = renderBuildApp(app, req.path, opts);
+    var template = renderIsomorphicApp(app, req.path, opts);
     res.send(template);
   });
 
   cb();
 }
 
-function renderBuildApp(app, path, opts) {
+function renderIsomorphicApp(app, path, opts) {
   return new Promise(function(resolve, reject) {
     if (debug)
       console.log('request: ', path);
