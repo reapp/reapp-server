@@ -1,6 +1,6 @@
 // runs a simple express server to serve assets
 // & a webpack-dev-server for serving the app
-// or in isomorphic looks for a bundle and index and serves
+// or in Build looks for a bundle and index and serves
 
 var Express = require('express');
 var Path = require('path');
@@ -17,7 +17,6 @@ var makeBuildDir = require('./lib/makeBuildDir');
 var express = Express();
 
 // opts:
-//   mode: corresponds to config files, typically 'development' or 'isomorphic'
 //   staticPaths: array of strings, relative paths of where to serve static assets
 //   dir: dir of where to serve app
 //   debug: turn on debugging from webpack
@@ -39,7 +38,7 @@ function setupExpress(opts) {
   });
 }
 
-function setupWebpackServer(opts, cb) {
+function setupWebpackDevServer(opts, cb) {
   opts.hostname = opts.hostname || 'localhost';
 
   opts.entry = function entry() {
@@ -47,7 +46,7 @@ function setupWebpackServer(opts, cb) {
     appEntry();
   };
 
-  webpackServer.run(opts, function(template) {
+  webpackServer(opts, function(template) {
     express.get('*', function(req, res) {
       res.send(template);
     });
@@ -68,14 +67,14 @@ function setupIsomorphicServer(opts, cb) {
   }
 
   express.get('*', function(req, res) {
-    var template = renderIsomorphicApp(app, req.path, opts);
+    var template = renderBuildApp(app, req.path, opts);
     res.send(template);
   });
 
   cb();
 }
 
-function renderIsomorphicApp(app, path, opts) {
+function renderBuildApp(app, path, opts) {
   return new Promise(function(resolve, reject) {
     if (debug)
       console.log('request: ', path);
@@ -131,10 +130,7 @@ module.exports = function(opts) {
     '...'
   );
 
-  return opts.iso ?
+  return opts.build ?
     setupIsomorphicServer(opts, startServer) :
-    setupWebpackServer(opts, startServer);
-
-  // makeBuildDir(opts.dir);
-  // linkServerModules(opts.dir, );
+    setupWebpackDevServer(opts, startServer);
 };
