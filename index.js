@@ -6,9 +6,7 @@ var Express = require('express');
 var Path = require('path');
 var Yargs = require('yargs').argv;
 var fs = require('fs');
-var Router = require('react-router');
 var Cors = require('cors');
-var mkdirp = require('mkdirp');
 
 var webpackServer = require('./lib/webpackServer');
 var makeBuildDir = require('./lib/makeBuildDir');
