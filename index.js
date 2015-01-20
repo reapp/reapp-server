@@ -40,11 +40,6 @@ function setupExpress(opts) {
 function setupWebpackDevServer(opts, cb) {
   opts.hostname = opts.hostname || 'localhost';
 
-  opts.entry = function entry() {
-    var appEntry = reqiure(opts.entry);
-    appEntry();
-  };
-
   webpackServer(opts, function(template) {
     express.get('*', function(req, res) {
       res.send(template);
@@ -73,6 +68,7 @@ function setupIsomorphicServer(opts, cb) {
   cb();
 }
 
+// todo: make this work
 function renderIsomorphicApp(app, path, opts) {
   return new Promise(function(resolve, reject) {
     if (debug)
@@ -94,6 +90,9 @@ function renderIsomorphicApp(app, path, opts) {
       if (debug)
         console.log('layout', layout);
 
+      // var STYLE_URL = 'main.css?' + stats.hash;
+      // var SCRIPT_URL = [].concat(stats.assetsByChunkName.main)[0] + '?' + stats.hash;
+
       var output = layout
         .replace('<!-- CONTENT -->', html)
         .replace('<!-- DATA -->', '<script>window.SERVER_DATA = ' + JSON.stringify(data) + ';</script>')
@@ -106,6 +105,8 @@ function renderIsomorphicApp(app, path, opts) {
 }
 
 function startServer() {
+  console.log('Running express server on', express.get('port'), '...');
+
   express.listen(
     express.get('port')
   );
@@ -116,18 +117,10 @@ function startServer() {
 module.exports = function(opts) {
   opts = opts || Yargs;
 
-  console.log(
-    'Starting server in', opts.mode, 'mode...'
-  );
+  console.log('Starting...');
 
   // order not important
   setupExpress(opts);
-
-  console.log(
-    'Running express server on',
-    express.get('port'),
-    '...'
-  );
 
   return opts.build ?
     setupIsomorphicServer(opts, startServer) :
