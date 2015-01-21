@@ -2,7 +2,7 @@
 // & a webpack-dev-server for serving the app
 // or in Build looks for a bundle and index and serves
 
-var Express = require('express');
+var express = require('express');
 var Path = require('path');
 var Yargs = require('yargs').argv;
 var fs = require('fs');
@@ -11,7 +11,7 @@ var Cors = require('cors');
 var webpackServer = require('./lib/webpackServer');
 var makeBuildDir = require('./lib/makeBuildDir');
 
-var express = Express();
+var server = express();
 
 // opts:
 //   staticPaths: array of strings, relative paths of where to serve static assets
@@ -20,8 +20,8 @@ var express = Express();
 //   hostname: set hostname to serve from, default 'localhost'
 
 function setupExpress(opts) {
-  express.set('port', opts.port);
-  express.use(Cors());
+  server.set('port', opts.port);
+  server.use(Cors());
 
   var staticPaths = opts.staticPaths || [
     '/build/public',
@@ -31,7 +31,7 @@ function setupExpress(opts) {
   ];
 
   staticPaths.forEach(function(path) {
-    express.use('/assets', Express.static(opts.dir + path));
+    server.use('/assets', express.static(opts.dir + path));
   });
 }
 
@@ -39,7 +39,7 @@ function setupWebpackDevServer(opts, cb) {
   opts.hostname = opts.hostname || 'localhost';
 
   webpackServer(opts, function(template) {
-    express.get('*', function(req, res) {
+    server.get('*', function(req, res) {
       res.send(template);
     });
 
@@ -58,7 +58,7 @@ function setupIsomorphicServer(opts, cb) {
     console.log();
   }
 
-  express.get('*', function(req, res) {
+  server.get('*', function(req, res) {
     var template = renderIsomorphicApp(app, req.path, opts);
     res.send(template);
   });
@@ -103,10 +103,10 @@ function renderIsomorphicApp(app, path, opts) {
 }
 
 function startServer() {
-  console.log('Running express server on', express.get('port'), '...');
+  console.log('Running express server on', server.get('port'), '...');
 
-  express.listen(
-    express.get('port')
+  server.listen(
+    server.get('port')
   );
 }
 
