@@ -1,4 +1,4 @@
-### reapp-server
+## reapp-server
 
 reapp-server provides express and webpack servers that work together to serve
 a reapp app.
@@ -26,10 +26,5 @@ hostname: set hostname to serve from, default 'localhost'
 
 ### TODO
 
-- Figure out better if its in a reapp directory before symlinking server_modules
-- Lots of work needed to get production apps running again
-- Also work to be done getting isomorphic working again
-- General organization and code docs throughout
-- Vendor splitting isn't integrated into ./webpack/server.js
-
-### MIT Licensed
+- Work to be done getting isomorphic working again
+- General organization, tests and code docs throughout
