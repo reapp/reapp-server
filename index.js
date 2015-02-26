@@ -7,13 +7,13 @@ var express = require('express');
 var Path = require('path');
 var fs = require('fs');
 var cors = require('cors');
+require('colors');
 
 function runServer(opts) {
-  console.log('Starting...');
-
   var server = express();
 
   server.set('port', opts.port);
+  server.set('hostname', opts.hostname || 'localhost');
   server.use(cors());
 
   var staticPaths = opts.staticPaths || [
@@ -31,10 +31,11 @@ function runServer(opts) {
     res.send(opts.template);
   });
 
-  console.log('Running express server on', server.get('port'), '...');
+  console.log('View your app on http://%s:%s'.green.bold, server.get('hostname'), server.get('port'));
 
   server.listen(
-    server.get('port')
+    server.get('port'),
+    server.get('hostname')
   );
 }
 

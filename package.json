@@ -9,6 +9,7 @@
   "author": "Nate Wienert",
   "license": "MIT",
   "dependencies": {
+    "colors": "^1.0.3",
     "cors": "~2.5.2",
     "express": "~4.11.0"
   }
