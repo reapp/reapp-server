@@ -1,6 +1,6 @@
 {
   "name": "reapp-server",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simple express server for running reapp structured apps",
   "main": "index.js",
   "scripts": {
