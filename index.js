@@ -31,7 +31,11 @@ function runServer(opts) {
     res.send(opts.template);
   });
 
-  console.log('View your app on http://%s:%s'.green.bold, server.get('hostname'), server.get('port'));
+  console.log(
+    'Your app is running on http://%s:%s'.green.bold,
+    server.get('hostname'),
+    server.get('port')
+  );
 
   server.listen(
     server.get('port'),
