@@ -26,6 +26,8 @@ function runServer(opts) {
   staticPaths.forEach(function(path) {
     server.use('/assets', express.static(opts.dir + path));
   });
+  
+  server.use('/', express.static(opts.dir + '/assets/shared'));
 
   server.get('*', function(req, res) {
     res.send(opts.template);
